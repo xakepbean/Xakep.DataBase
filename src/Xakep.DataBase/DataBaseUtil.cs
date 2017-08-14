@@ -10,19 +10,6 @@ namespace Xakep.DataBase
 {
     public class DataBaseUtil
     {
-        //private static void InitDataBase()
-        //{
-        //    using (var connection = new NpgsqlConnection("host=localhost;user id=postgres;password=postgres@123;database=postgres"))
-        //    {
-        //        var vExists = connection.ExecuteScalar<int>("select count(*) from pg_database where datname='databackup'") > 0;
-        //        if (!vExists)
-        //        {
-        //            Console.WriteLine("init database ...");
-        //            connection.Execute("create database databackup");
-        //        }
-        //    }
-        //}
-
         private static void InitPgSql(DataBaseOptions options, Action<string> StandardOutput = null)
         {
             var binpath = Path.Combine(options.DataBaseSetupPath, "bin");
@@ -39,13 +26,12 @@ namespace Xakep.DataBase
 
         public static void StartDataBase(DataBaseOptions options, Action<string> StandardOutput = null)
         {
-            //string strPgDir = Path.Combine(AppContext.BaseDirectory, "pgsql");
             if (!Directory.Exists(options.DataBaseSetupPath))
             {
                 Console.WriteLine("unzip database files ...");
                 UnZipFile(options.DataBaseSetupPath);
             }
-            //string strPgData = Path.Combine(AppContext.BaseDirectory, "pgsql", "pg_data");
+
             if (!Directory.Exists(options.DataBasePath))
             {
                 Console.WriteLine("init database ...");

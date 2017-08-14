@@ -2,6 +2,10 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Description>init database
+start database 
+stop database</Description>
   </PropertyGroup>
 
   <ItemGroup>
