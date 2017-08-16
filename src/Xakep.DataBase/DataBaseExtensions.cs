@@ -6,12 +6,19 @@ using System.Threading.Tasks;
 
 namespace Xakep.DataBase
 {
+    /// <summary>
+    /// 数据库扩展
+    /// </summary>
     public static class DataBaseExtensions
     {
-
+        /// <summary>
+        /// 停止数据库
+        /// </summary>
+        /// <param name="host"></param>
+        /// <returns></returns>
         public static IWebHost UseStopDataBase(this IWebHost host)
         {
-            var options = new DataBaseOptions() { DataBaseSetupPath = Path.Combine(AppContext.BaseDirectory, "database"), DataBasePath = Path.Combine(AppContext.BaseDirectory, "database", "data") };
+            var options = new DataBaseOptions();
             var applicationLifetime = host.Services.GetService<IApplicationLifetime>();
             applicationLifetime.ApplicationStopped.Register(obj =>
             {
@@ -20,19 +27,15 @@ namespace Xakep.DataBase
             return host;
         }
 
+        /// <summary>
+        /// 启动数据库，如没安装，自动安装，如没初始化，自动初始化
+        /// </summary>
+        /// <param name="hostBuilder"></param>
+        /// <returns></returns>
         public static IWebHostBuilder UseStartDataBase(this IWebHostBuilder hostBuilder)
         {
-            
-            var aa=hostBuilder.GetSetting("DataBaseSetupPath");
-
-            var options = new DataBaseOptions() {
-                DataBaseSetupPath = Path.Combine(AppContext.BaseDirectory, "database"),
-                DataBasePath = Path.Combine(AppContext.BaseDirectory, "database", "data")
-            };
-            DataBaseUtil.StartDataBase(options, p => Console.WriteLine(p));
-            
+            DataBaseUtil.StartDataBase(new DataBaseOptions(), p => Console.WriteLine(p));
             return hostBuilder;
         }
-
     }
 }

@@ -5,11 +5,22 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 
 namespace Xakep.DataBase
 {
+    /// <summary>
+    /// 控制数据库初始化，启动，停止
+    /// </summary>
     public class DataBaseUtil
     {
+        private static readonly string pgsqlzipurl="https://raw.githubusercontent.com/xakepbean/Xakep.DataBase/master/src/Xakep.DataBase/zippgsql.zip";
+
+        /// <summary>
+        /// 初始化数据库，创建postgres账号，密码默认 postgres@123
+        /// </summary>
+        /// <param name="options"></param>
+        /// <param name="StandardOutput"></param>
         private static void InitPgSql(DataBaseOptions options, Action<string> StandardOutput = null)
         {
             var binpath = Path.Combine(options.DataBaseSetupPath, "bin");
@@ -24,18 +35,31 @@ namespace Xakep.DataBase
                 System.IO.File.Delete(pwdfile);
         }
 
+        /// <summary>
+        /// 在启动website时，启动数据库
+        /// </summary>
+        /// <param name="options"></param>
+        /// <param name="StandardOutput"></param>
+        /// <example>
+        /// public static IWebHost BuildWebHost(string[] args) =>
+        ///         WebHost.CreateDefaultBuilder(args)
+        ///                .UseStartDataBase()
+        ///                .UseStartup<Startup>()
+        ///                .Build()
+        ///                .UseStopDataBase();
+        /// </example>
         public static void StartDataBase(DataBaseOptions options, Action<string> StandardOutput = null)
         {
             if (!Directory.Exists(options.DataBaseSetupPath))
             {
-                Console.WriteLine("unzip database files ...");
-                UnZipFile(options.DataBaseSetupPath);
+                StandardOutput?.Invoke("unzip database files ...");
+                UnZipFile(options.DataBaseSetupPath, StandardOutput);
             }
 
             if (!Directory.Exists(options.DataBasePath))
             {
-                Console.WriteLine("init database ...");
-                InitPgSql(options, p => Console.WriteLine(p));
+                StandardOutput?.Invoke("init database ...");
+                InitPgSql(options, StandardOutput);
             }
 
 
@@ -49,7 +73,21 @@ namespace Xakep.DataBase
             }
             StandardOutput?.Invoke("database runing ...");
         }
-
+        
+        /// <summary>
+        /// 在停止website时，停止数据库
+        /// 注意只有正常使用ctrl+c的关闭程序才有效
+        /// </summary>
+        /// <param name="options"></param>
+        /// <param name="StandardOutput"></param>
+        /// <example>
+        /// public static IWebHost BuildWebHost(string[] args) =>
+        ///         WebHost.CreateDefaultBuilder(args)
+        ///                .UseStartDataBase()
+        ///                .UseStartup<Startup>()
+        ///                .Build()
+        ///                .UseStopDataBase();
+        /// </example>
         public static void StopDataBase(DataBaseOptions options, Action<string> StandardOutput = null)
         {
             var pid = Path.Combine(options.DataBasePath, "postmaster.pid");
@@ -63,11 +101,15 @@ namespace Xakep.DataBase
             StandardOutput?.Invoke("database stop successfully");
         }
 
-        private static void UnZipFile(string TargetDirectory)
+        /// <summary>
+        /// 解压自带的数据库压缩包
+        /// </summary>
+        /// <param name="TargetDirectory"></param>
+        private static void UnZipFile(string TargetDirectory, Action<string> StandardOutput = null)
         {
             var ExecAssembly = Assembly.GetExecutingAssembly();
             var pgsqlzip = $"{ExecAssembly.GetName().Name}.zippgsql.zip";
-            var pgsqlfile = Path.Combine(AppContext.BaseDirectory, "pgsql.zip");
+            var pgsqlfile = Path.Combine(AppContext.BaseDirectory, "zippgsql.zip");
             using (var PgStream = ExecAssembly.GetManifestResourceStream(pgsqlzip))
             {
                 if (PgStream != null)
@@ -78,6 +120,14 @@ namespace Xakep.DataBase
                     sw.Close();
                 }
             }
+
+            if (!File.Exists(pgsqlfile))
+            {
+                StandardOutput?.Invoke($"download {pgsqlzipurl}");
+                StandardOutput?.Invoke("zippgsql.zip");
+               DownLoadFile(pgsqlfile, StandardOutput);
+            }
+
             if (File.Exists(pgsqlfile))
             {
                 UnZip(pgsqlfile, TargetDirectory);
@@ -85,6 +135,14 @@ namespace Xakep.DataBase
             }
         }
 
+        /// <summary>
+        /// 执行命令
+        /// </summary>
+        /// <param name="dir"></param>
+        /// <param name="cmdText"></param>
+        /// <param name="standerd"></param>
+        /// <param name="StandardOutput"></param>
+        /// <returns></returns>
         private static List<string> RunInDirTimeoutPipeline(string dir, string cmdText, Encoding standerd, Action<string> StandardOutput = null)
         {
             dir = dir.TrimEnd('/', '\\');
@@ -151,6 +209,14 @@ namespace Xakep.DataBase
             }
             return new List<string>();
         }
+
+        /// <summary>
+        /// 解压文件
+        /// </summary>
+        /// <param name="ZipFile"></param>
+        /// <param name="TargetDirectory"></param>
+        /// <param name="DecryptPassword"></param>
+        /// <param name="OverWrite"></param>
         private static void UnZip(string ZipFile, string TargetDirectory, string DecryptPassword=null, bool OverWrite = true)
         {
             if (!Directory.Exists(TargetDirectory))
@@ -204,11 +270,102 @@ namespace Xakep.DataBase
                 zipfiles.Close();
             }
         }
+
+        /// <summary>
+        /// -d start 启动数据库
+        /// -d stop  停止数据库
+        /// </summary>
+        /// <param name="args"></param>
+        /// <param name="StandardOutput"></param>
+        /// <returns></returns>
+        /// <example>
+        /// public static void Main(string[] args)
+        /// {
+        ///    if (!DataBaseUtil.OnlyExecStartStop(args, p => Console.WriteLine(p)))
+        ///        BuildWebHost(args).Run();
+        /// }
+        /// </example>
+        public static bool OnlyExecStartStop(string[] args,Action<string> StandardOutput = null)
+        {
+            if (args.Length <2)
+                return false;
+            if (!args[0].Equals("-d", StringComparison.OrdinalIgnoreCase))
+                return false;
+            var vcmd = args[1].ToLower();
+            switch (vcmd)
+            {
+                case "start":
+                    StartDataBase(new DataBaseOptions(), StandardOutput);
+                    break;
+                case "stop":
+                    StopDataBase(new DataBaseOptions(), StandardOutput);
+                    break;
+            }
+            return vcmd == "start" || vcmd == "stop";
+        }
+
+        /// <summary>
+        /// 从github上下载pgsql压缩安装包
+        /// </summary>
+        /// <param name="pgsqlfile"></param>
+        /// <param name="StandardOutput"></param>
+        private static void DownLoadFile(string pgsqlfile, Action<string> StandardOutput = null)
+        {
+            using (System.Net.WebClient web = new System.Net.WebClient())
+            {
+                string tempfile = Path.Combine(Path.GetDirectoryName(pgsqlfile), Path.GetFileNameWithoutExtension(pgsqlfile) +"temp"+Path.GetExtension(pgsqlfile));
+                bool IsDownload = false;
+                web.DownloadFileCompleted += delegate (object sender, System.ComponentModel.AsyncCompletedEventArgs e)
+                 {
+                     IsDownload = true;
+
+                     StandardOutput?.Invoke("downloaded successfully");
+                     File.Move(tempfile, pgsqlfile);
+                 };
+                web.DownloadProgressChanged += delegate (object sender, System.Net.DownloadProgressChangedEventArgs e)
+                {
+                    Console.Write($"\rdownloaded {ConvertByteToMb(e.BytesReceived)} of {ConvertByteToMb(e.TotalBytesToReceive)} mb. {e.ProgressPercentage} % complete...........................");
+                };
+
+                Console.CancelKeyPress += delegate (object sender, ConsoleCancelEventArgs e)
+                {
+                    IsDownload = true;
+                };
+                web.DownloadFileAsync(new Uri(pgsqlzipurl),
+                    tempfile);
+                while (!IsDownload)
+                {
+                    Thread.Sleep(10);
+                }
+                web.Dispose();
+            }
+        }
+
+        private static string ConvertByteToMb(long Bytes)
+        {
+            return ((Bytes / 1024f) / 1024f).ToString("#0.##");
+        }
     }
 
+    /// <summary>
+    /// 数据库安装选项
+    /// </summary>
     public class DataBaseOptions
     {
+        public DataBaseOptions()
+        {
+            DataBaseSetupPath = Path.Combine(AppContext.BaseDirectory, "database");
+            DataBasePath = Path.Combine(AppContext.BaseDirectory, "database", "data");
+        }
+
+        /// <summary>
+        /// 安装路径
+        /// </summary>
         public string DataBaseSetupPath { get; set; }
+
+        /// <summary>
+        /// 数据库文件路径
+        /// </summary>
         public string DataBasePath { get; set; }
     }
 }

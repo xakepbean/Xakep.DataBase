@@ -16,7 +16,8 @@ namespace pgsql_sample
     {
         public static void Main(string[] args)
         {
-            BuildWebHost(args).Run();
+            if (!DataBaseUtil.OnlyExecStartStop(args, p => Console.WriteLine(p)))
+                BuildWebHost(args).Run();
         }
 
         public static IWebHost BuildWebHost(string[] args) =>
