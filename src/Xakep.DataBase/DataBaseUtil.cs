@@ -237,8 +237,9 @@ namespace Xakep.DataBase
                     string pathToZip = "";
                     pathToZip = theEntry.Name;
 
-                    if (pathToZip != "")
-                        directoryName = Path.GetDirectoryName(pathToZip) + Path.DirectorySeparatorChar;
+                    var divToZip = System.IO.Path.GetDirectoryName(pathToZip);
+                    if (pathToZip != "" && divToZip != "")
+                        directoryName = divToZip + System.IO.Path.DirectorySeparatorChar;
 
                     string fileName = Path.GetFileName(pathToZip);
 
@@ -250,16 +251,19 @@ namespace Xakep.DataBase
                         {
                             using (FileStream streamWriter = File.Create(TargetDirectory + directoryName + fileName))
                             {
-                                int size = 2048;
-                                byte[] data = new byte[2048];
-                                while (true)
+                                if (theEntry.Size > 0)
                                 {
-                                    size = zipfiles.Read(data, 0, data.Length);
+                                    int size = 2048;
+                                    byte[] data = new byte[2048];
+                                    while (true)
+                                    {
+                                        size = zipfiles.Read(data, 0, data.Length);
 
-                                    if (size > 0)
-                                        streamWriter.Write(data, 0, size);
-                                    else
-                                        break;
+                                        if (size > 0)
+                                            streamWriter.Write(data, 0, size);
+                                        else
+                                            break;
+                                    }
                                 }
                                 streamWriter.Close();
                             }
