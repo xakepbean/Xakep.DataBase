@@ -62,15 +62,26 @@ namespace Xakep.DataBase
                 InitPgSql(options, StandardOutput);
             }
 
-
-            var binpath = Path.Combine(options.DataBaseSetupPath, "bin");
             var pid = Path.Combine(options.DataBasePath, "postmaster.pid");
-            if (!File.Exists(pid))
+            if (File.Exists(pid))
             {
-                StandardOutput?.Invoke("start database ...");
-                string strCmd = $"pg_ctl -D {options.DataBasePath} -l logfile start";
-                var vLine = RunInDirTimeoutPipeline(binpath, strCmd, Console.OutputEncoding, StandardOutput);
+                var vpid = File.ReadAllLines(pid);
+                if (vpid.Length > 0 && int.TryParse(vpid[0], out int spid))
+                {
+                    var postpro = Process.GetProcessById(spid);
+                    if (postpro != null && postpro.ProcessName.Equals("postgres.exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        StandardOutput?.Invoke("database runing ...");
+                        return;
+                    }
+                }
             }
+
+            StandardOutput?.Invoke("start database ...");
+            string strCmd = $"pg_ctl -D {options.DataBasePath} -l logfile start";
+            var binpath = Path.Combine(options.DataBaseSetupPath, "bin");
+            var vLine = RunInDirTimeoutPipeline(binpath, strCmd, Console.OutputEncoding, StandardOutput);
+
             StandardOutput?.Invoke("database runing ...");
         }
         
