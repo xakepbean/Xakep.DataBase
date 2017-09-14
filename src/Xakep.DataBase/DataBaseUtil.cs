@@ -68,11 +68,17 @@ namespace Xakep.DataBase
                 var vpid = File.ReadAllLines(pid);
                 if (vpid.Length > 0 && int.TryParse(vpid[0], out int spid))
                 {
-                    var postpro = Process.GetProcessById(spid);
-                    if (postpro != null && postpro.ProcessName.Equals("postgres.exe", StringComparison.OrdinalIgnoreCase))
+                    try
                     {
-                        StandardOutput?.Invoke("database runing ...");
-                        return;
+                        var postpro = Process.GetProcessById(spid);
+                        if (postpro != null && postpro.ProcessName.Equals("postgres", StringComparison.OrdinalIgnoreCase))
+                        {
+                            StandardOutput?.Invoke("database runing ...");
+                            return;
+                        }
+                    }
+                    catch
+                    {
                     }
                 }
             }
