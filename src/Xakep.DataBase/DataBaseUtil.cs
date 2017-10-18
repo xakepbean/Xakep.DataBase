@@ -31,8 +31,53 @@ namespace Xakep.DataBase
             string strCmd = $"initdb -D {options.DataBasePath} -E UTF-8 --locale=chs -A md5 -U postgres --pwfile={pwdfile}";
 
             var vLine = RunInDirTimeoutPipeline(binpath, strCmd, Console.OutputEncoding, StandardOutput);
+
+            SetConfig(Path.Combine(options.DataBaseSetupPath, "../initsql.conf"), Path.Combine(options.DataBasePath, "postgresql.conf"));
+
             if (System.IO.File.Exists(pwdfile))
                 System.IO.File.Delete(pwdfile);
+        }
+
+        private static void SetConfig(string initConfigPath,string postgreSqlConfigPath)
+        {
+            if (File.Exists(initConfigPath) && File.Exists(postgreSqlConfigPath))
+            {
+                Dictionary<string, string> DicKey = new Dictionary<string, string>();
+                var allInit = System.IO.File.ReadAllLines(initConfigPath, Encoding.UTF8);
+                foreach (var item in allInit)
+                {
+                    if (item.Contains("="))
+                    {
+                        var vspit = item.Split('=');
+                        if(vspit.Length>=2 
+                            && !string.IsNullOrWhiteSpace(vspit[0])
+                            && !string.IsNullOrWhiteSpace(vspit[1])
+                            && !DicKey.ContainsKey(vspit[0].Trim()))
+                        {
+                            DicKey.Add(vspit[0].Trim(), vspit[1].Trim());
+                        }
+                    }
+                }
+                
+              
+                var alllist = System.IO.File.ReadAllLines(postgreSqlConfigPath, Encoding.UTF8);
+                for (int i = 0; i < alllist.Length; i++)
+                {
+                    foreach (var item in DicKey)
+                    {
+                        if (alllist[i].StartsWith($"{item.Key}=")
+                            || alllist[i].StartsWith($"{item.Key} =")
+                            || alllist[i].StartsWith($"#{item.Key}=")
+                            || alllist[i].StartsWith($"#{item.Key} ="))
+                        {
+                            alllist[i] = $"{item.Key} = {item.Value} #{alllist[i]}"; ;
+                        }
+                    }
+                }
+                File.WriteAllLines(postgreSqlConfigPath, alllist, Encoding.UTF8);
+
+                File.Delete(initConfigPath);
+            }
         }
 
         /// <summary>
