@@ -60,7 +60,7 @@ namespace Xakep.DataBase
                 }
                 
               
-                var alllist = System.IO.File.ReadAllLines(postgreSqlConfigPath, Encoding.UTF8);
+                var alllist = System.IO.File.ReadAllLines(postgreSqlConfigPath);
                 for (int i = 0; i < alllist.Length; i++)
                 {
                     foreach (var item in DicKey)
@@ -74,7 +74,7 @@ namespace Xakep.DataBase
                         }
                     }
                 }
-                File.WriteAllLines(postgreSqlConfigPath, alllist, Encoding.UTF8);
+                File.WriteAllLines(postgreSqlConfigPath, alllist);
 
                 File.Delete(initConfigPath);
             }
